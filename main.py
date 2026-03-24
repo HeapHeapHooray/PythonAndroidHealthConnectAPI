@@ -47,11 +47,19 @@ class AndroidApp(App):
         )
         btn_sleep.bind(on_press=self.read_sleep)
         
+        btn_hr = Button(
+            text="4. Read Heart Rate (Today)",
+            font_size='20sp',
+            size_hint=(1, 0.2)
+        )
+        btn_hr.bind(on_press=self.read_heart_rate)
+        
         layout.add_widget(self.label)
         layout.add_widget(btn_status)
         layout.add_widget(btn_request)
         layout.add_widget(btn_read)
         layout.add_widget(btn_sleep)
+        layout.add_widget(btn_hr)
         
         return layout
 
@@ -204,6 +212,52 @@ class AndroidApp(App):
                 SleepCallback(self)
             )
             self.label.text = "Reading sleep data..."
+            
+        except Exception as e:
+            self.label.text = f"Wrapper Error: {str(e)}"
+
+    def read_heart_rate(self, instance):
+        if platform != 'android':
+            self.label.text = "Error: Not running on Android!"
+            return
+
+        try:
+            from jnius import autoclass, PythonJavaClass, java_method
+            
+            HealthConnectWrapper = autoclass('com.health.HealthConnectWrapper')
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            
+            class HRCallback(PythonJavaClass):
+                __javainterfaces__ = ['com/health/HealthConnectWrapper$Callback']
+                __javacontext__ = 'app'
+
+                def __init__(self, outer):
+                    super().__init__()
+                    self.outer = outer
+
+                @java_method('(Ljava/lang/String;)V')
+                def onResult(self, result):
+                    if result == "No data":
+                        self.outer.label.text = "Average Heart Rate: No data"
+                    else:
+                        self.outer.label.text = f"Average Heart Rate: {result} BPM"
+
+                @java_method('(Ljava/lang/String;)V')
+                def onError(self, error):
+                    self.outer.label.text = f"Read Error: {error}"
+
+            # Calculate time range for today
+            now = int(time.time() * 1000)
+            start_of_day = int((time.time() - (time.time() % 86400)) * 1000)
+            
+            wrapper = HealthConnectWrapper()
+            wrapper.readHeartRate(
+                PythonActivity.mActivity,
+                start_of_day,
+                now,
+                HRCallback(self)
+            )
+            self.label.text = "Reading heart rate..."
             
         except Exception as e:
             self.label.text = f"Wrapper Error: {str(e)}"

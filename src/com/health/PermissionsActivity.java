@@ -8,6 +8,7 @@ import androidx.health.connect.client.PermissionController;
 import androidx.health.connect.client.permission.HealthPermission;
 import androidx.health.connect.client.records.StepsRecord;
 import androidx.health.connect.client.records.SleepSessionRecord;
+import androidx.health.connect.client.records.HeartRateRecord;
 import androidx.activity.result.contract.ActivityResultContract;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,6 +26,7 @@ public class PermissionsActivity extends Activity {
             Set<String> permissions = new HashSet<>();
             permissions.add(HealthPermission.getReadPermission(JvmClassMappingKt.getKotlinClass(StepsRecord.class)));
             permissions.add(HealthPermission.getReadPermission(JvmClassMappingKt.getKotlinClass(SleepSessionRecord.class)));
+            permissions.add(HealthPermission.getReadPermission(JvmClassMappingKt.getKotlinClass(HeartRateRecord.class)));
             
             Intent intent = contract.createIntent(this, permissions);
             startActivityForResult(intent, REQUEST_CODE);
