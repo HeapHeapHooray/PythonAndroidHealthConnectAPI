@@ -25,6 +25,8 @@ android.debug_artifact = apk
 android.add_src = src
 android.gradle_dependencies = androidx.health.connect:connect-client:1.1.0-alpha11, org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3, org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3
 
+p4a.hook = p4a_hook.py
+
 [buildozer]
 build_dir = /tmp/python-android-buildozer
 log_level = 2

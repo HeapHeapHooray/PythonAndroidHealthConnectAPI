@@ -13,8 +13,11 @@ class AndroidApp(App):
         self.label = Label(
             text="Health Connect Example",
             font_size='24sp',
-            size_hint=(1, 0.4)
+            size_hint=(1, 0.4),
+            halign='center',
+            valign='middle'
         )
+        self.label.bind(width=lambda *x: self.label.setter('text_size')(self.label, (self.label.width - 40, None)))
         
         btn_status = Button(
             text="1. Check Status",
@@ -23,6 +26,13 @@ class AndroidApp(App):
         )
         btn_status.bind(on_press=self.check_health_connect)
         
+        btn_request = Button(
+            text="1.5. Request Permissions",
+            font_size='20sp',
+            size_hint=(1, 0.2)
+        )
+        btn_request.bind(on_press=self.request_permissions)
+
         btn_read = Button(
             text="2. Read Steps (Today)",
             font_size='20sp',
@@ -32,6 +42,7 @@ class AndroidApp(App):
         
         layout.add_widget(self.label)
         layout.add_widget(btn_status)
+        layout.add_widget(btn_request)
         layout.add_widget(btn_read)
         
         return layout
@@ -57,6 +68,23 @@ class AndroidApp(App):
                 self.label.text = f"Status Code: {status}"
         except Exception as e:
             self.label.text = f"Error: {str(e)}"
+
+    def request_permissions(self, instance):
+        if platform != 'android':
+            self.label.text = "Error: Not running on Android!"
+            return
+
+        try:
+            from jnius import autoclass
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            Intent = autoclass('android.content.Intent')
+            
+            intent = Intent()
+            intent.setClassName(PythonActivity.mActivity, "com.health.PermissionsActivity")
+            PythonActivity.mActivity.startActivity(intent)
+            self.label.text = "Requesting permissions..."
+        except Exception as e:
+            self.label.text = f"Permission Error: {str(e)}"
 
     def read_steps(self, instance):
         if platform != 'android':
