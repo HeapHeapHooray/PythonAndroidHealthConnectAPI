@@ -12,7 +12,7 @@ osx.python_version = 3
 osx.kivy_version = 1.9.1
 
 fullscreen = 0
-android.permissions = INTERNET, android.permission.health.READ_STEPS, android.permission.health.READ_HEART_RATE
+android.permissions = INTERNET, android.permission.health.READ_STEPS, android.permission.health.READ_HEART_RATE, android.permission.health.READ_SLEEP
 android.api = 35
 android.minapi = 26
 android.sdk = 35

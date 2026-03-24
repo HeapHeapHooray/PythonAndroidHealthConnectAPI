@@ -1,26 +1,18 @@
 import os
-import glob
 
-def before_apk_build(toolchain):
-    print("Running custom p4a hook to inject activities!")
+def before_apk_assemble(toolchain):
+    print("Running custom p4a hook to inject activities right before assemble!")
     
-    # Try to find AndroidManifest.xml starting from current directory
     cwd = os.getcwd()
-    manifest_path = None
     
     for root, dirs, files in os.walk(cwd):
         if 'AndroidManifest.xml' in files and 'src/main' in root.replace('\\', '/'):
             manifest_path = os.path.join(root, 'AndroidManifest.xml')
-            break
             
-    if not manifest_path:
-        print("Could not find AndroidManifest.xml!")
-        return
-        
-    with open(manifest_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-        
-    extra_xml = """
+            with open(manifest_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                
+            extra_xml = """
         <activity android:name="com.health.PermissionsActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity android:name="com.health.PermissionsRationaleActivity" android:exported="true">
             <intent-filter>
@@ -38,11 +30,27 @@ def before_apk_build(toolchain):
             </intent-filter>
         </activity-alias>
     """
-    
-    if '</application>' in content and 'com.health.PermissionsActivity' not in content:
-        content = content.replace('</application>', extra_xml + '\n    </application>')
-        with open(manifest_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print("Successfully injected activities into AndroidManifest.xml at " + manifest_path)
-    else:
-        print("Activities already injected or </application> tag not found.")
+            queries_xml = """
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_REQUEST_PERMISSIONS" />
+        </intent>
+    </queries>
+    """
+            
+            modified = False
+            if '</application>' in content and 'com.health.PermissionsActivity' not in content:
+                content = content.replace('</application>', extra_xml + '\n    </application>')
+                modified = True
+                print("Injected activities into AndroidManifest.xml at " + manifest_path)
+            
+            if '<queries>' not in content and '<application' in content:
+                content = content.replace('<application', queries_xml + '<application')
+                modified = True
+                print("Injected queries into AndroidManifest.xml at " + manifest_path)
+                
+            if modified:
+                with open(manifest_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+

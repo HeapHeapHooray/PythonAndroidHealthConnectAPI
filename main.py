@@ -40,10 +40,18 @@ class AndroidApp(App):
         )
         btn_read.bind(on_press=self.read_steps)
         
+        btn_sleep = Button(
+            text="3. Read Sleep (Today)",
+            font_size='20sp',
+            size_hint=(1, 0.2)
+        )
+        btn_sleep.bind(on_press=self.read_sleep)
+        
         layout.add_widget(self.label)
         layout.add_widget(btn_status)
         layout.add_widget(btn_request)
         layout.add_widget(btn_read)
+        layout.add_widget(btn_sleep)
         
         return layout
 
@@ -78,10 +86,30 @@ class AndroidApp(App):
             from jnius import autoclass
             PythonActivity = autoclass('org.kivy.android.PythonActivity')
             Intent = autoclass('android.content.Intent')
+            PackageManager = autoclass('android.content.pm.PackageManager')
             
+            context = PythonActivity.mActivity
+            pm = context.getPackageManager()
+            
+            # Diagnostic check: Let's see if the system actually sees our Activity!
+            info = pm.getPackageInfo(context.getPackageName(), PackageManager.GET_ACTIVITIES)
+            activities = info.activities
+            
+            found = False
+            if activities:
+                for act in activities:
+                    if act.name == "com.health.PermissionsActivity":
+                        found = True
+                        break
+            
+            if not found:
+                self.label.text = "Error: PermissionsActivity not found in installed APK! Please uninstall the old app completely and reinstall the new APK."
+                return
+
             intent = Intent()
-            intent.setClassName(PythonActivity.mActivity, "com.health.PermissionsActivity")
-            PythonActivity.mActivity.startActivity(intent)
+            intent.setClassName(context.getPackageName(), "com.health.PermissionsActivity")
+            
+            context.startActivity(intent)
             self.label.text = "Requesting permissions..."
         except Exception as e:
             self.label.text = f"Permission Error: {str(e)}"
@@ -127,6 +155,55 @@ class AndroidApp(App):
                 HealthCallback(self)
             )
             self.label.text = "Reading steps..."
+            
+        except Exception as e:
+            self.label.text = f"Wrapper Error: {str(e)}"
+
+    def read_sleep(self, instance):
+        if platform != 'android':
+            self.label.text = "Error: Not running on Android!"
+            return
+
+        try:
+            from jnius import autoclass, PythonJavaClass, java_method
+            
+            HealthConnectWrapper = autoclass('com.health.HealthConnectWrapper')
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            
+            class SleepCallback(PythonJavaClass):
+                __javainterfaces__ = ['com/health/HealthConnectWrapper$Callback']
+                __javacontext__ = 'app'
+
+                def __init__(self, outer):
+                    super().__init__()
+                    self.outer = outer
+
+                @java_method('(Ljava/lang/String;)V')
+                def onResult(self, result):
+                    try:
+                        millis = int(result)
+                        hours = millis // 3600000
+                        minutes = (millis % 3600000) // 60000
+                        self.outer.label.text = f"Time Slept: {hours}h {minutes}m"
+                    except ValueError:
+                        self.outer.label.text = f"Invalid result: {result}"
+
+                @java_method('(Ljava/lang/String;)V')
+                def onError(self, error):
+                    self.outer.label.text = f"Read Error: {error}"
+
+            # Calculate time range for today
+            now = int(time.time() * 1000)
+            start_of_day = int((time.time() - (time.time() % 86400)) * 1000)
+            
+            wrapper = HealthConnectWrapper()
+            wrapper.readSleep(
+                PythonActivity.mActivity,
+                start_of_day,
+                now,
+                SleepCallback(self)
+            )
+            self.label.text = "Reading sleep data..."
             
         except Exception as e:
             self.label.text = f"Wrapper Error: {str(e)}"

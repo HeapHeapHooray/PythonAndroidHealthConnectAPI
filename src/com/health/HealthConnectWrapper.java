@@ -3,6 +3,7 @@ package com.health;
 import android.app.Activity;
 import androidx.health.connect.client.HealthConnectClient;
 import androidx.health.connect.client.records.StepsRecord;
+import androidx.health.connect.client.records.SleepSessionRecord;
 import androidx.health.connect.client.request.ReadRecordsRequest;
 import androidx.health.connect.client.time.TimeRangeFilter;
 import androidx.health.connect.client.response.ReadRecordsResponse;
@@ -51,6 +52,49 @@ public class HealthConnectWrapper {
                                     totalSteps += record.getCount();
                                 }
                                 callback.onResult(String.valueOf(totalSteps));
+                            } catch (Exception e) {
+                                callback.onError("Read failed: " + result.toString() + " | " + e.getMessage());
+                            }
+                        }
+                    });
+                } catch (Exception e) {
+                    callback.onError(e.getMessage() != null ? e.getMessage() : "Unknown error");
+                }
+            }
+        }).start();
+    }
+
+    public void readSleep(final Activity activity, final long startTimeMillis, final long endTimeMillis, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    HealthConnectClient client = HealthConnectClient.getOrCreate(activity);
+                    TimeRangeFilter filter = TimeRangeFilter.between(
+                        Instant.ofEpochMilli(startTimeMillis),
+                        Instant.ofEpochMilli(endTimeMillis)
+                    );
+                    
+                    ReadRecordsRequest<SleepSessionRecord> request = new ReadRecordsRequest<>(
+                        JvmClassMappingKt.getKotlinClass(SleepSessionRecord.class), 
+                        filter, new HashSet<DataOrigin>(), true, 1000, null
+                    );
+                    
+                    client.readRecords(request, new Continuation<ReadRecordsResponse<SleepSessionRecord>>() {
+                        @Override
+                        public CoroutineContext getContext() {
+                            return EmptyCoroutineContext.INSTANCE;
+                        }
+
+                        @Override
+                        public void resumeWith(Object result) {
+                            try {
+                                ReadRecordsResponse<SleepSessionRecord> response = (ReadRecordsResponse<SleepSessionRecord>) result;
+                                long totalMillis = 0;
+                                for (SleepSessionRecord record : response.getRecords()) {
+                                    totalMillis += (record.getEndTime().toEpochMilli() - record.getStartTime().toEpochMilli());
+                                }
+                                callback.onResult(String.valueOf(totalMillis));
                             } catch (Exception e) {
                                 callback.onError("Read failed: " + result.toString() + " | " + e.getMessage());
                             }
