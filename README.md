@@ -34,6 +34,7 @@ Even with the activities properly registered, requesting permissions threw an `A
 * **Request Permissions:** Requests read access for Steps and Sleep data using the official Health Connect UI.
 * **Read Steps:** Retrieves the total step count for the current day.
 * **Read Sleep:** Retrieves the total time slept (in hours and minutes) for the current day.
+* **Read Heart Rate:** Retrieves the average heart rate (BPM) for the current day.
 
 ## How to Build
 
